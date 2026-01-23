@@ -569,15 +569,6 @@ curl http://localhost:8000/health
 - Use TURN servers for NAT traversal
 - Optimize video resolution based on bandwidth
 
-## Contributing
-
-We welcome contributions to FLUX! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ### Code Style
 - Follow ESLint configuration
