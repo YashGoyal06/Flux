@@ -14,7 +14,6 @@ A modern, real-time video conferencing platform featuring synchronized media pla
 - [Deployment](#deployment)
 - [API Documentation](#api-documentation)
 - [Project Structure](#project-structure)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Features
