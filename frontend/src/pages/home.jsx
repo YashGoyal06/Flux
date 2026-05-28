@@ -7,7 +7,6 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { AuthContext } from '../contexts/AuthContext';
 import FloatingLines from '../components/FloatingLines';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 function HomeComponent() {
     let navigate = useNavigate();

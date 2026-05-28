@@ -276,7 +276,8 @@ export default function FloatingLines({
   const bottomLineDistance = enabledWaves.includes('bottom') ? getLineDistance('bottom') * 0.01 : 0.01;
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const currentContainer = containerRef.current;
+    if (!currentContainer) return;
 
     const scene = new Scene();
 
@@ -287,7 +288,7 @@ export default function FloatingLines({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    containerRef.current.appendChild(renderer.domElement);
+    currentContainer.appendChild(renderer.domElement);
 
     const uniforms = {
       iTime: { value: 0 },
@@ -363,8 +364,8 @@ export default function FloatingLines({
     const clock = new Clock();
 
     const setSize = () => {
-      const el = containerRef.current;
-      if (!el) return; // Add safety check
+      const el = currentContainer;
+      if (!el) return;
       
       const width = el.clientWidth || 1;
       const height = el.clientHeight || 1;
@@ -379,13 +380,13 @@ export default function FloatingLines({
     setSize();
 
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
-      if (containerRef.current) { // Add safety check
+      if (currentContainer) {
         setSize();
       }
     }) : null;
 
-    if (ro && containerRef.current) {
-      ro.observe(containerRef.current);
+    if (ro && currentContainer) {
+      ro.observe(currentContainer);
     }
 
     const handlePointerMove = event => {
@@ -439,7 +440,7 @@ export default function FloatingLines({
 
     return () => {
       cancelAnimationFrame(raf);
-      if (ro && containerRef.current) {
+      if (ro && currentContainer) {
         ro.disconnect();
       }
 
@@ -455,6 +456,7 @@ export default function FloatingLines({
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     linesGradient,
     enabledWaves,

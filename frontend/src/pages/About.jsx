@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Stack, Divider, IconButton } from '@mui/material';
+import { Box, Typography, Stack, Divider } from '@mui/material';
 import { AutoAwesome, Groups, Speed } from '@mui/icons-material';
 const backgroundPath = "url('../about.jpg')"; 
 

@@ -5,7 +5,6 @@ import "../App.css";
 // Component Imports
 import FloatingLines from '../components/FloatingLines';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 export default function LandingPage() {
     const ACCENT_COLOR = "#8B0000"; 

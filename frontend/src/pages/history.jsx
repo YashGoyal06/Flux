@@ -14,7 +14,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Container, Alert, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import Navbar from '../components/Navbar';
 import FloatingLines from '../components/FloatingLines';
-import Footer from '../components/Footer'; // Import Footer
 import { deleteMeeting, deleteAllMeetings } from '../utils/history';
 
 export default function History() {
@@ -44,6 +43,7 @@ export default function History() {
 
     useEffect(() => {
         fetchHistory();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     let formatDate = (dateString) => {
