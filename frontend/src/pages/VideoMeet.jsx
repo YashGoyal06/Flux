@@ -1,6 +1,6 @@
 // frontend/src/pages/VideoMeet.jsx
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Badge, IconButton, TextField, Button, Box, Typography } from '@mui/material';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { Badge, IconButton, TextField, Button, Typography } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
@@ -26,109 +26,51 @@ const VideoTile = React.memo(({ videoData, isSmall }) => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
-    // DESKTOP FIX: Robust video element setup
     useEffect(() => {
         const videoElement = videoRef.current;
         if (!videoElement || !videoData.stream) {
-            console.log('⏳ Waiting for video element or stream...');
             return;
         }
 
-        console.log(`🎬 Setting up video for ${videoData.socketId}:`, {
-            streamId: videoData.stream.id,
-            tracks: videoData.stream.getTracks().map(t => ({
-                kind: t.kind,
-                enabled: t.enabled,
-                readyState: t.readyState
-            }))
-        });
-
-        // CRITICAL: Ensure stream has active tracks
-        const activeTracks = videoData.stream.getTracks().filter(t => 
-            t.readyState === 'live' && t.enabled
-        );
-
-        if (activeTracks.length === 0) {
-            console.warn(`⚠️ No active tracks for ${videoData.socketId}`);
-            return;
-        }
-
-        // DESKTOP FIX: Set srcObject and configure element
+        let cancelled = false;
         videoElement.srcObject = videoData.stream;
         videoElement.autoplay = true;
         videoElement.playsInline = true;
-        videoElement.muted = videoData.isLocal; // Mute local to avoid feedback
+        videoElement.muted = videoData.isLocal;
+        setRetryCount(0);
 
-        // DESKTOP FIX: Multiple play attempts with retry logic
-        const attemptPlay = async (attempt = 0) => {
+        const playVideo = async () => {
             try {
-                // Clear any previous errors
-                videoElement.load();
-                
-                console.log(`▶️ Attempt ${attempt + 1} to play ${videoData.socketId}`);
                 await videoElement.play();
-                
-                console.log(`✅ Video playing for ${videoData.socketId}`);
-                setIsLoaded(true);
-                setRetryCount(0);
-                
+                if (!cancelled) setIsLoaded(true);
             } catch (error) {
-                console.warn(`⚠️ Play attempt ${attempt + 1} failed for ${videoData.socketId}:`, error.name);
-                
-                if (attempt < 5) {
-                    // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
-                    const delay = 100 * Math.pow(2, attempt);
-                    console.log(`⏳ Retrying in ${delay}ms...`);
-                    
-                    setTimeout(() => {
-                        setRetryCount(attempt + 1);
-                        attemptPlay(attempt + 1);
-                    }, delay);
-                } else {
-                    console.error(`❌ Failed to play video after ${attempt + 1} attempts`);
+                if (!cancelled) {
+                    console.warn(`Video autoplay failed for ${videoData.socketId}:`, error.name);
                     setIsLoaded(false);
+                    setRetryCount((count) => count + 1);
                 }
             }
         };
 
-        // DESKTOP FIX: Wait for stream to be fully ready
-        const checkAndPlay = () => {
-            const tracks = videoData.stream.getTracks();
-            const allReady = tracks.every(t => t.readyState === 'live');
-            
-            if (allReady) {
-                console.log(`✅ All tracks ready for ${videoData.socketId}, attempting play`);
-                attemptPlay();
-            } else {
-                console.log(`⏳ Waiting for tracks to be ready...`);
-                setTimeout(checkAndPlay, 100);
-            }
-        };
-
-        checkAndPlay();
-
-        // DESKTOP FIX: Handle track events
         const handleTrackEnded = () => {
-            console.log(`🛑 Track ended for ${videoData.socketId}`);
             setIsLoaded(false);
         };
+
+        videoElement.onloadedmetadata = playVideo;
+        playVideo();
 
         videoData.stream.getTracks().forEach(track => {
             track.addEventListener('ended', handleTrackEnded);
         });
 
-        // Cleanup
         return () => {
-            console.log(`🧹 Cleaning up video for ${videoData.socketId}`);
+            cancelled = true;
+            videoElement.onloadedmetadata = null;
             videoData.stream.getTracks().forEach(track => {
                 track.removeEventListener('ended', handleTrackEnded);
             });
-            
-            if (videoElement.srcObject) {
-                videoElement.srcObject = null;
-            }
         };
-    }, [videoData.stream, videoData.socketId, videoData.isLocal, retryCount]);
+    }, [videoData.stream, videoData.socketId, videoData.isLocal]);
 
     // Audio level detection (simplified for stability)
     useEffect(() => {
@@ -252,6 +194,7 @@ export default function VideoMeetComponent() {
     const [copied, setCopied] = useState(false);
     const [mediaReady, setMediaReady] = useState(false);
     const localVideoRef = useRef(null);
+    const localMediaStreamRef = useRef(null);
     const streamInitializedRef = useRef(false);
     
     // Get Room ID from URL
@@ -280,6 +223,7 @@ export default function VideoMeetComponent() {
                     audio: { echoCancellation: true, noiseSuppression: true } 
                 });
                 streamInitializedRef.current = true;
+                localMediaStreamRef.current = stream;
                 setLocalStream(stream);
                 setMediaReady(true);
                 if (localVideoRef.current) {
@@ -292,10 +236,9 @@ export default function VideoMeetComponent() {
         };
         initMedia();
         return () => {
-            if (localStream && streamInitializedRef.current) {
-                localStream.getTracks().forEach(t => t.stop());
-                streamInitializedRef.current = false;
-            }
+            localMediaStreamRef.current?.getTracks().forEach(t => t.stop());
+            localMediaStreamRef.current = null;
+            streamInitializedRef.current = false;
         };
     }, []);
 
@@ -387,6 +330,12 @@ export default function VideoMeetComponent() {
                     <IconButton size="small" onClick={handleCopyLink} sx={{ color: copied ? '#4CAF50' : 'white' }}>{copied ? <CheckIcon fontSize="small"/> : <ContentCopyIcon fontSize="small"/>}</IconButton>
                 </div>
             </div>
+
+            {connectionError && (
+                <div style={{ background: '#7f1d1d', color: 'white', padding: '8px 16px', textAlign: 'center', fontSize: '0.9rem', zIndex: 10 }}>
+                    Connection issue: {connectionError}
+                </div>
+            )}
             
             {/* Main Stage */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex' }}>

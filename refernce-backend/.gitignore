@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Environment Variables
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Static & Media
+staticfiles/
+media/
+
+# Python Packaging
+build/
+dist/
+*.egg-info/
+
+# Pytest
+.pytest_cache/
+
+# Mypy
+.mypy_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Temporary Files
+*.swp
+*.swo
+
+# One-time migration scripts
+migrate_to_supabase.py

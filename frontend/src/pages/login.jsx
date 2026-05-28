@@ -1,10 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import '../styles/login.css';
-import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import server from '../environment';
+import { isSupabaseConfigured, supabase } from '../supabaseClient';
 
 // --- Icons (Lucide React) ---
 const ChevronLeftIcon = ({ className }) => (
@@ -24,6 +24,44 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  useEffect(() => {
+    const syncSupabaseSession = async () => {
+      if (!supabase) return;
+
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      const accessToken = data?.session?.access_token;
+
+      if (sessionError || !accessToken) return;
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await axios.post(
+          `${server}/api/v1/auth/supabase`,
+          { access_token: accessToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        if (response.status === 200 && response.data.token) {
+          localStorage.setItem('token', response.data.token);
+          if (response.data.user) {
+            setUserData(response.data.user);
+          }
+          await supabase.auth.signOut();
+          navigate('/home');
+        }
+      } catch (err) {
+        console.error('Supabase login sync error:', err);
+        setError(err.response?.data?.message || 'Google login failed. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    syncSupabaseSession();
+  }, [navigate, setUserData]);
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
@@ -60,60 +98,24 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLoginSuccess = async (credentialResponse) => {
-    setLoading(true);
+  const handleGoogleLogin = async () => {
     setError('');
-    
-    try {
-        console.log('Google credential received');
-        
-        const response = await axios.post(
-            `${server}/api/v1/auth/google`,
-            { token: credentialResponse.credential },
-            {
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                withCredentials: true
-            }
-        );
-        
-        console.log('Backend response:', response.data);
-        
-        if (response.status === 200 && response.data.token) {
-            // Store token
-            localStorage.setItem("token", response.data.token);
-            
-            // Update context with user data
-            if (response.data.user) {
-                setUserData(response.data.user);
-            }
-            
-            // Navigate to home
-            console.log('Navigating to home...');
-            navigate("/home");
-        } else {
-            setError("Invalid response from server");
-        }
-    } catch (error) {
-        console.error("Google login error:", error);
-        
-        // Handle specific error messages
-        if (error.response?.data?.message) {
-            setError(error.response.data.message);
-        } else if (error.message) {
-            setError(error.message);
-        } else {
-            setError("Google login failed. Please try again.");
-        }
-    } finally {
-        setLoading(false);
-    }
-  };
 
-  const handleGoogleLoginError = () => {
-    setError("Google login failed. Please try again.");
-    setLoading(false);
+    if (!isSupabaseConfigured || !supabase) {
+      setError('Supabase auth is not configured. Add REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY.');
+      return;
+    }
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+      },
+    });
+
+    if (oauthError) {
+      setError(oauthError.message || 'Google login failed. Please try again.');
+    }
   };
 
   return (
@@ -152,16 +154,10 @@ export default function Login() {
           </div>
 
           <div className="social-buttons" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={handleGoogleLoginError}
-                useOneTap={false}
-                size="large"
-                text={isSignUp ? "signup_with" : "signin_with"}
-                shape="rectangular"
-                theme="filled_blue"
-                auto_select={false}
-            />
+            <button type="button" className="google-button" onClick={handleGoogleLogin} disabled={loading}>
+              <span className="google-icon">G</span>
+              {isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
+            </button>
           </div>
 
           <div className="separator-container">
