@@ -16,9 +16,26 @@ function HomeComponent() {
     const { addToUserHistory } = useContext(AuthContext);
 
     let handleJoinVideoCall = async () => {
-        if (meetingCode.trim()) {
-            await addToUserHistory(meetingCode);
-            navigate(`/${meetingCode}`);
+        let code = meetingCode.trim();
+        if (code) {
+            if (code.includes('/') || code.includes('http://') || code.includes('https://')) {
+                try {
+                    const url = new URL(code);
+                    const pathSegments = url.pathname.split('/');
+                    const lastSegment = pathSegments.filter(s => s.trim() !== '').pop();
+                    if (lastSegment) {
+                        code = lastSegment;
+                    }
+                } catch (e) {
+                    const segments = code.split('/');
+                    const lastSegment = segments.filter(s => s.trim() !== '').pop();
+                    if (lastSegment) {
+                        code = lastSegment;
+                    }
+                }
+            }
+            await addToUserHistory(code);
+            navigate(`/${code}`);
         }
     }
 

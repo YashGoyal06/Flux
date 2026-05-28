@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import server from '../environment';
 
+const turnServerUrl = process.env.REACT_APP_TURN_SERVER_URL || 'turn:openrelay.metered.ca:443';
+const turnServerUsername = process.env.REACT_APP_TURN_SERVER_USERNAME || 'openrelayproject';
+const turnServerCredential = process.env.REACT_APP_TURN_SERVER_PASSWORD || 'openrelayproject';
+
 const peerConfig = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -8,6 +12,16 @@ const peerConfig = {
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
+        {
+            urls: turnServerUrl,
+            username: turnServerUsername,
+            credential: turnServerCredential
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
     ],
     iceCandidatePoolSize: 10,
 };
