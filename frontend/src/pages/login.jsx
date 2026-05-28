@@ -26,41 +26,45 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
-    const syncSupabaseSession = async () => {
-      if (!supabase) return;
+    if (!supabase) return;
 
-      const { data, error: sessionError } = await supabase.auth.getSession();
-      const accessToken = data?.session?.access_token;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (
+          (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
+          session?.access_token
+        ) {
+          setLoading(true);
+          setError('');
 
-      if (sessionError || !accessToken) return;
+          try {
+            const response = await axios.post(
+              `${server}/api/v1/auth/supabase`,
+              { access_token: session.access_token },
+              { headers: { 'Content-Type': 'application/json' } }
+            );
 
-      setLoading(true);
-      setError('');
-
-      try {
-        const response = await axios.post(
-          `${server}/api/v1/auth/supabase`,
-          { access_token: accessToken },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        if (response.status === 200 && response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          if (response.data.user) {
-            setUserData(response.data.user);
+            if (response.status === 200 && response.data.token) {
+              localStorage.setItem('token', response.data.token);
+              if (response.data.user) {
+                setUserData(response.data.user);
+              }
+              await supabase.auth.signOut();
+              navigate('/home');
+            }
+          } catch (err) {
+            console.error('Supabase login sync error:', err);
+            setError(
+              err.response?.data?.message || 'Google login failed. Please try again.'
+            );
+          } finally {
+            setLoading(false);
           }
-          await supabase.auth.signOut();
-          navigate('/home');
         }
-      } catch (err) {
-        console.error('Supabase login sync error:', err);
-        setError(err.response?.data?.message || 'Google login failed. Please try again.');
-      } finally {
-        setLoading(false);
       }
-    };
+    );
 
-    syncSupabaseSession();
+    return () => subscription.unsubscribe();
   }, [navigate, setUserData]);
 
   const handleEmailLogin = async (e) => {
